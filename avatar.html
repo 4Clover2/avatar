@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>avatar</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"> <!-- 屏蔽双击缩放功能 -->
+	<script type="text/javascript" src="eruda.min.js"></script>
+	<style type="text/css">
+		* {margin: 0; padding: 0;}
+		body {background: black;}
+		#avatar {
+           border: 1px solid black;
+           background-color: black;
+		}
+		#cut {
+			position: absolute;
+			z-index: 1;
+			top: 58px;
+			left: 0;
+		}
+		#header {
+			background-color: rgb(237,237,237);
+			/*width: 100%;*/
+			height: 58px;
+			padding: 14px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			box-sizing: border-box;
+		}
+		.func {display: flex;}
+		/*选择文件按钮*/
+		.file {
+			position: relative;
+			display: flex;
+			align-items: center;
+			background: rgb(7,193,96);
+			border: 1px solid rgb(7,193,96);
+			border-radius: 12px;
+			padding:  5px;
+			overflow: hidden;
+			color: white;
+			text-align: center;
+			text-decoration: none;
+			/*line-height: 20px;*/
+			font-size: 14px;
+		}
+
+		.file input {
+			position: absolute;
+			font-size: 14px;
+			right: 0;
+			opacity: 0;
+		}
+
+		/*保存按钮*/
+		#save {
+			background-color: rgb(7,193,96);
+			border: 1px solid rgb(7,193,96);
+			border-radius: 12px;
+			width: 68px;
+			height: 30px;
+			color: white;
+			font-size: 14px;
+			margin-left: 10px;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<div id="header">
+		<div style="font-size: 18px;">
+			<span><</span>
+			<span>头像</span>
+		</div>
+		<div class="func">
+			<a href="javascript:;" class="file">
+				<span>选择文件</span>
+				<input type="file" name="" id="inputBox">	<!-- 获取对文件的描述信息 -->
+			</a>
+			<input type="button" value="保存" id="save">
+		</div>
+	</div>
+	<canvas id="avatar" ></canvas> <!-- 底层画布显示图片 -->
+	<canvas id="cut"></canvas>	<!-- 裁切图片 -->
+</body>
+
+<script type="text/javascript">
+	eruda.init();
+	var imgObj, imgX, imgY, imgW, imgH;
+	var startX, startY; 
+	// var nowX
+	// var nowY
+	var start = [];	// 存放触点坐标
+	var isTouch = false;	// 是否为触点
+
+	window.onload = function(){
+		var startX, startY;
+		var startX1, startY1; // 缩放第二指
+		// 显示图片
+		var canvas = document.getElementById('avatar');
+		var ctx;
+		// 检测canvas支持性
+		if (canvas.getContext) {
+			ctx = canvas.getContext('2d');	// 返回一个对象，该对象提供了用在画布上绘图的方法和属性
+		}else {
+			document.write("你的浏览器不支持canvas，请升级你的浏览器");
+			return 
+		}
+		// canvas 大小
+		canvas.width = document.documentElement.clientWidth - 2;
+		canvas.height = document.documentElement.clientHeight - 64;
+		read(ctx,canvas.width,canvas.height)
+
+
+		// 裁剪图片
+		var canvas1 = document.getElementById("cut");
+		var ctx1;
+		if(canvas1.getContext) {
+			ctx1 = canvas1.getContext('2d');
+		}else {
+			document.write("你的浏览器不支持canvas，请升级你的浏览器");
+			return
+		}
+		canvas1.width = document.documentElement.clientWidth ;
+		canvas1.height = document.documentElement.clientHeight - 64;
+		// 裁剪一个正方形区域 -> 裁剪图片区域
+		ctx1.fillStyle="rgb(0,0,0,0.6)";
+		ctx1.fillRect(0, 0, canvas1.width, canvas1.height);
+		ctx1.beginPath();
+		ctx1.strokeStyle = "white";
+
+		// 图片选框居中显示
+		if(document.documentElement.clientWidth % 2 == 0 ){
+			var ctx1X = (document.documentElement.clientWidth - 290 ) / 2;
+		}else {
+			var ctx1X = (document.documentElement.clientWidth - 291 ) / 2;
+		}
+
+		if(document.documentElement.clientHeight % 2 == 0 ){
+			var ctx1Y = (document.documentElement.clientHeight - 290 - 58 ) / 2;
+		}else {
+			var ctx1Y = (document.documentElement.clientHeight - 291 - 58 ) / 2;
+		}
+		ctx1.strokeRect(ctx1X,ctx1Y,290,290);
+		ctx1.clearRect(ctx1X,ctx1Y,290,290);
+
+		// 图片移动
+		move(canvas1, {
+			start: function (ev) {
+				startX = ev.targetTouches[0].clientX;
+				startY = ev.targetTouches[0].clientY;
+				console.log(startX, startY)
+
+				// if(ev.touches.length >= 2) {  // 判断是否有两个点在屏幕上
+				// 	start = ev.touches; // 得到第一组两个点
+				// }
+
+				// 表示手指已按下
+				isTouch = true; 
+			},
+			moveTo: function (ev) {
+				ev.preventDefault();
+				// 一根手指执行目标元素移动操作
+				
+				if(ev.targetTouches.length == 1 && isTouch){
+					imgX += ev.targetTouches[0].clientX - startX;
+					imgY += ev.targetTouches[0].clientY - startY;
+				
+					ctx.clearRect(0,0, canvas.width , canvas.height);
+					ctx.drawImage(imgObj, imgX, imgY, imgW, imgH);
+					startX = ev.targetTouches[0].clientX;
+					startY = ev.targetTouches[0].clientY;
+				}
+				
+				
+			},
+			end: function(ev) {
+				// 手指已经离开屏幕
+				if(isTouch){
+					isTouch = false;
+				}
+			}
+		})
+
+		var startW = 0;
+		var startH = 0;
+
+		change(canvas1, {
+			startCh: function(ev) {
+				if(ev.targetTouches.length >= 2 && isTouch) {
+					start = ev.targetTouches; // 得到第一组两个点
+					startW = imgW;
+					startH = imgH;
+				}
+			},
+			moveCh: function(ev) {
+				ev.preventDefault();
+				if(ev.targetTouches.length >= 2 && isTouch) {
+					var now = ev.targetTouches;
+				
+					// 得到缩放比例
+					var scale = (getDistance(now[0],now[1]) / getDistance(start[0],start[1]));
+					// 对缩放比例取整
+					if(scale >= 1) {
+					    scale = 1;
+					}
+					// 执行目标元素的缩放操作
+					imgWN = startW * scale;
+					imgHN = startH * scale;
+					
+					imgX = -((imgWN - imgW) / 2 - imgX);
+					imgY = imgY - (imgHN - imgH) / 2 ;
+
+					ctx.clearRect(0,0, canvas.width, canvas.height);
+					
+					ctx.drawImage(imgObj, imgX, imgY, imgWN, imgHN);
+					imgW = imgWN;
+					imgH = imgHN;
+				}
+			},
+			endCh: function(ev) {
+				// 手指已经离开屏幕
+				if(isTouch){
+					isTouch = false;
+				}
+			}
+		})
+
+		// 保存截后图片
+		document.getElementById('save').addEventListener('click', function(ev) {
+		    
+		    var imgData = ctx.getImageData(ctx1X, ctx1Y, 290, 290);
+		    ctx.clearRect(0,0, canvas.width , canvas.height);
+		    ctx.putImageData(imgData, ctx1X, ctx1Y);
+
+		})
+}
+
+	// 两根手指缩放
+	function change(ele, options) {
+		ele.addEventListener('touchstart', function (ev) {
+			options.startCh && options.startCh(ev);
+		});
+		ele.addEventListener('touchmove', function (ev) {
+			options.moveCh && options.moveCh(ev);
+		});
+		ele.addEventListener('touchend', function (ev) {
+			options.endCh && options.endCh(ev);
+		});
+		
+	
+	}
+
+	// 勾股定理方法
+	function getDistance(p1, p2) {
+		var x = p2.pageX - p1.pageX,
+			y = p2.pageY - p1.pageY;
+		return Math.sqrt((x*x) + (y*y));
+	}
+
+	// 获取中点
+	// function getMidpoint(p1, p2) {
+	// 	var x = (p1.pageX + p2.pageX) / 2,
+	// 		y = (p1.pageY + p2.pageY) / 2;
+	// 	return [x,y];
+ // 	}
+
+	// 移动图片
+	function move(ele, options) {
+		ele.addEventListener('touchstart', function (ev) {
+			
+			options.start && options.start(ev);
+		});
+		ele.addEventListener('touchmove', function (ev) {
+			
+			options.moveTo && options.moveTo(ev);
+		});
+		ele.addEventListener('touchend', function (ev) {
+		
+			options.end && options.end(ev);
+		});
+		
+	}
+
+
+	// 读取文件的数据
+	function read(ctx,canvasWidth, canvasHeight) {
+		var inputBox = document.getElementById("inputBox");
+		inputBox.addEventListener("change", function() {
+			// 清除画布
+			ctx.clearRect(0,0,canvasWidth,canvasHeight);
+			var reader = new FileReader();
+			reader.readAsDataURL(inputBox.files[0]);  // 发起异步请求
+			reader.onload = function() {
+				// 读取完成后，数据保存在对象的result 属性中
+				// 图片加载完后，将其显示在canvas中
+				var img = new Image();
+				img.src = this.result;
+				img.onload = function() {
+					var xRate = canvasWidth / img.width;
+					var yRate = canvasHeight / img.height;
+					var setRate = xRate<yRate ? xRate : yRate;
+					if(setRate>5){ setRate = 5;}
+					imgW = img.width * setRate;
+					imgH = img.height * setRate;
+					
+					imgObj = this;
+					imgX= (canvasWidth - imgW) / 2;
+					imgY = (canvasHeight - imgH) / 2;
+					ctx.drawImage(this, imgX, imgY, imgW, imgH);
+
+				}
+			}
+		}
+	)}		
+				
+</script>
+</html>
